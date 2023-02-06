@@ -56,31 +56,70 @@
     </style>
   </head>
   <body>
+    <h1>Socket.IO chat</h1>
+    <ul id='users'></ul>
     <ul id="messages"></ul>
     <form id="form" action=""><input id="input" autocomplete="off" /><button>Send</button></form>
     <script src="/socket.io/socket.io.js"></script>
     <script>
       var socket = io()
-      var name = prompt('What is your name?')
-      socket.emit('new user', name)
+      
+      var name
+      do {
+        name = prompt('What is your name?')
+      } while (!name)
 
       var messages = document.getElementById('messages')
       var form = document.getElementById('form')
       var input = document.getElementById('input')
 
+      input.addEventListener('input', function (e) {
+        socket.emit('typing', e.target.value ? name : null)
+      })
+
       form.addEventListener('submit', function (e) {
         e.preventDefault()
         if (input.value) {
-          socket.emit('chat message', input.value)
+          socket.emit('chat message', {user: name, msg:input.value})
           input.value = ''
         }
       })
 
-      socket.on('chat message', function (msg) {
+      socket.emit('user', name)
+
+      socket.on('user left', function (user) {
         var item = document.createElement('li')
-        item.textContent = msg
+        item.textContent = `${user} left the chat`
         messages.appendChild(item)
         window.scrollTo(0, document.body.scrollHeight)
+      })
+
+      socket.on('chat message', function ({user, msg}) {
+        var item = document.createElement('li')
+        item.textContent = `${user}: ${msg}`
+        messages.appendChild(item)
+        window.scrollTo(0, document.body.scrollHeight)
+      })
+
+      socket.on('user', function (user) {
+        var item = document.createElement('li')
+        item.textContent = `${user} joined the chat`
+        messages.appendChild(item)
+        window.scrollTo(0, document.body.scrollHeight)
+      })
+
+      socket.on('typing', function (user) {
+        var item = document.getElementById('typing')
+        if (item) {
+          item.remove()
+        }
+        if (user) {
+          item = document.createElement('li')
+          item.id = 'typing'
+          item.textContent = `${user} is typing...`
+          messages.appendChild(item)
+          window.scrollTo(0, document.body.scrollHeight)
+        }
       })
     </script>
   </body>
